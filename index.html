@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 Firebase Monitor & Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: sans-serif; text-align: center; background-color: #fafafa; }
+        .data-card { border: 1px solid #ddd; background-color: white; padding: 20px; width: 300px; margin: 20px auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .data-label { font-size: 14px; color: #777; text-transform: uppercase; letter-spacing: 1px; }
+        .data-value { font-size: 48px; font-weight: bold; color: #333; margin: 10px 0; }
+        .data-unit { font-size: 18px; color: #777; }
+        
+        /* Gaya Tombol */
+        .btn { padding: 15px 40px; font-size: 18px; font-weight: bold; border: none; border-radius: 50px; cursor: pointer; color: white; transition: 0.3s; margin-top: 15px; width: 80%; }
+        .btn-on { background-color: #28a745; box-shadow: 0 4px 15px rgba(40,167,69,0.4); }
+        .btn-off { background-color: #dc3545; box-shadow: 0 4px 15px rgba(220,53,69,0.4); }
+        
+        #timestamp { font-size: 12px; color: #888; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>Dashboard Kontrol & Monitoring ESP32</h1>
+
+    <div class="data-card">
+        <p class="data-label">Counter Integer</p>
+        <p class="data-value" id="count">--</p>
+    </div>
+
+    <div class="data-card">
+        <p class="data-label">Simulasi Suhu</p>
+        <p class="data-value" id="suhu">--<span class="data-unit">°C</span></p>
+    </div>
+
+    <div class="data-card">
+        <p class="data-label">Kontrol LED / PIN ESP32</p>
+        <button id="led-btn" class="btn btn-off" onclick="toggleLED()">TURN ON</button>
+    </div>
+
+    <p id="timestamp">Data terakhir diupdate: --</p>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        // MASUKKAN KONFIGURASI FIREBASE ANDA
+        const firebaseConfig = {
+            apiKey: "AIzaSyAACz3xFoNyatV7xCH4_5If7LWg_zuR5nU", 
+            databaseURL: "https://cobacoba-bac67-default-rtdb.asia-southeast1.firebasedatabase.app" 
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let statusLED = 0; // 0 = OFF, 1 = ON
+
+        // 1. BACA DATA MONITORING (Sama seperti sebelumnya)
+        database.ref("/test/int").on("value", (snapshot) => {
+            document.getElementById("count").innerText = snapshot.val();
+            updateTimestamp();
+        });
+
+        database.ref("/test/suhu").on("value", (snapshot) => {
+            const data = snapshot.val();
+            if (data !== null) {
+                document.getElementById("suhu").innerHTML = data.toFixed(1) + '<span class="data-unit">°C</span>';
+                updateTimestamp();
+            }
+        });
+
+        // 2. BACA STATUS LED SAAT INI (Agar tombol sinkron jika ada user lain yang menekan)
+        database.ref("/test/led").on("value", (snapshot) => {
+            statusLED = snapshot.val();
+            const btn = document.getElementById("led-btn");
+            
+            if (statusLED === 1) {
+                btn.innerText = "TURN OFF";
+                btn.className = "btn btn-on";
+            } else {
+                btn.innerText = "TURN ON";
+                btn.className = "btn btn-off";
+            }
+        });
+
+        // 3. FUNGSI SAKELAR UNTUK MENULIS KE FIREBASE
+        function toggleLED() {
+            const targetStatus = statusLED === 1 ? 0 : 1;
+            // Kirim nilai baru ke path /test/led
+            database.ref("/test/led").set(targetStatus);
+        }
+
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById("timestamp").innerText = "Data terakhir diupdate: " + now.toLocaleTimeString();
+        }
+    </script>
+
+</body>
+</html>
