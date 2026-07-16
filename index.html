@@ -1,72 +1,96 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dashboard Firebase VL6180X</title>
-  <style>
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; text-align: center; background-color: #f0f2f5; margin: 0; padding: 20px; }
-    .container { background: white; max-width: 400px; margin: auto; padding: 30px 20px; border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-    h2 { color: #1a73e8; margin-top: 0; }
-    .status { font-size: 0.9rem; font-weight: bold; padding: 10px; border-radius: 5px; margin-bottom: 20px; background-color: #e8f0fe; color: #1967d2; }
-    .data-jarak { font-size: 5rem; font-weight: bold; color: #202124; margin: 10px 0; }
-    .unit { font-size: 1.5rem; color: #5f6368; }
-    .notif { padding: 15px; border-radius: 8px; font-weight: bold; transition: 0.3s; margin-top: 20px; }
-    .aman { background-color: #ceead6; color: #0d652d; border: 1px solid #a8dab5; }
-    .awas { background-color: #fad2cf; color: #a50e0e; border: 1px solid #f6aca6; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Sensor Jarak</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background-color: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 300px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 24px;
+        }
+        .distance-display {
+            font-size: 56px;
+            font-weight: bold;
+            color: #007BFF;
+            margin: 20px 0;
+        }
+        .unit {
+            font-size: 24px;
+            color: #666;
+        }
+        .status {
+            font-size: 14px;
+            color: #28a745;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="container">
-    <h2>Pemantau Sensor (Firebase)</h2>
-    <div id="statusKoneksi" class="status">Menghubungkan ke Firebase...</div>
-    
-    <div class="data-jarak"><span id="jarak">--</span><span class="unit">cm</span></div>
-    <div class="notif aman" id="notifBox">Menunggu Data...</div>
-  </div>
+    <div class="card">
+        <h2>Monitoring Jarak</h2>
+        <div class="distance-display">
+            <span id="nilai_jarak">--</span><span class="unit"> cm</span>
+        </div>
+        <div class="status" id="status_koneksi">Menghubungkan ke database...</div>
+    </div>
 
-  <script type="module">
-    // Import fungsi Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    <script>
+        // =========================================================
+        // MASUKKAN KONFIGURASI FIREBASE ANDA DI SINI
+        // =========================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAACz3xFoNyatV7xCH4_5If7LWg_zuR5nU",
+            authDomain: "cobacoba-bac67.firebaseapp.com",
+            databaseURL: "https://cobacoba-bac67-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "cobacoba-bac67",
+            storageBucket: "cobacoba-bac67.firebasestorage.app",
+            messagingSenderId: "667992657023",
+            appId: "1:667992657023:web:ba819d1984e4a403fc834a"
+        };
 
-    // MASUKKAN DATA FIREBASE ANDA DI SINI
-    const firebaseConfig = {
-      apiKey: "AIzaSyAACz3xFoNyatV7xCH4_5If7LWg_zuR5nU",
-      databaseURL: "https://cobacoba-bac67-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "cobacoba-bac67"
-    };
+        // Inisialisasi Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
-    // Inisialisasi Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    
-    // Targetkan ke folder data sensor di database
-    const sensorRef = ref(db, 'sensor_vl6180x');
+        // Referensi ke path yang sama dengan ESP32 ("/sensor/jarak")
+        const sensorRef = database.ref('/sensor/jarak');
 
-    document.getElementById('statusKoneksi').innerHTML = "🟢 Terhubung ke Firebase Realtime Database!";
-
-    // Mendengarkan perubahan data secara otomatis (Real-time)
-    onValue(sensorRef, (snapshot) => {
-      const data = snapshot.val();
-      
-      if (data) {
-        // Update angka jarak
-        document.getElementById("jarak").innerHTML = data.jarak;
-        
-        // Update notifikasi
-        const box = document.getElementById("notifBox");
-        if (data.status_masuk) {
-          box.innerHTML = "⚠️ OBJEK MEMASUKI AREA (<= 19cm)";
-          box.className = "notif awas";
-        } else {
-          box.innerHTML = "Objek di luar area (> 19cm)";
-          box.className = "notif aman";
-        }
-      }
-    });
-  </script>
-
+        // Mengambil data secara real-time
+        sensorRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data !== null) {
+                document.getElementById('nilai_jarak').innerText = data.toFixed(1);
+                document.getElementById('status_koneksi').innerText = "Live (Real-time)";
+                document.getElementById('status_koneksi').style.color = "#28a745";
+            }
+        }, (error) => {
+            console.error("Error Firebase:", error);
+            document.getElementById('status_koneksi').innerText = "Gagal terhubung ke database!";
+            document.getElementById('status_koneksi').style.color = "red";
+        });
+    </script>
 </body>
-</html> 
+</html>
